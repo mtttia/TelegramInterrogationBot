@@ -21,6 +21,8 @@ bot.action('seeSubject', onSeeSubject)
 bot.action(/subject.+/, onSubject)
 bot.action('modifyList', onModifyList)
 bot.action(/modify.+/, onModifySubject)
+bot.action(/randomList.+/,onRandomList)
+bot.action(/addStudent.+/, )
 
 bot.on('message', message)
 
@@ -302,7 +304,49 @@ async function onModifyList(ctx) {
 
 async function onModifySubject(ctx) {
   let subject = ctx.match[0].split('$')[1]
+  await ctx.reply("Lista \n" + ((await getSubjectList(subject)) || "la lista è vuota"))
+  await ctx.telegram.sendMessage(
+    ctx.chat.id,
+    "Cosa vuoi fare nella lista di " + subject,
+    {reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: 'genera lista casualmente',
+            callback_data: "randomList$"+subject
+          }
+        ],
+        [
+          {
+            text: "aggiungi uno studente",
+            callback_data: "addStudent$" + subject
+          }
+        ]
+      ]
+    }}
+  )
+}
+
+async function onRandomList(ctx) {
+  let subject = ctx.match[0].split('$')[1]
+  let student = await Database.getStudents()
+  student = Utility.randomList(student)
+  await ctx.reply('Lista generata \n' + ((student.map(el => el.position + ". " + el.student.name + " " + el.student.surname + "\n").join(''))))
+  await Database.deleteList(subject)
+  await Database.insertListStudent(subject, student)
+  start(ctx)
+}
+
+export function onAddStudent(ctx) {
+  let subject = ctx.match[0].split('$')[1]
   
+}
+
+async function getSubjectList(subject) {
+  let list = await Database.getInterrogationList(subject)
+  return list.map(el => {
+    return el.position + ". " + el.name + " " + el.surname + "\n"
+  }).join('')
 }
 
 async function visualizzatore(ctx) {

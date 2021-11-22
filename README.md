@@ -1,7 +1,7 @@
 # 5g Gestione
 
 ## Main info
-link = http://t.me/quintagbot
+link = http://t.me/quintagbot<br>
 --- WORK IN PROGRESS ---
 
 ## How set up environment
@@ -26,6 +26,5 @@ link = http://t.me/quintagbot
 
 
 ## Tecnology
-This bot is made with javascript, node js as playground, and Telegraf js.
-
+This bot is made with javascript, node js as playground, and Telegraf js.<br>
 Database is a sqlite database.

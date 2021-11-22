@@ -371,3 +371,77 @@ export async function getSubjectList(subject) {
     db.close()
   })
 }
+
+  
+
+export async function inserStudentInList(subject, student, position) {
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(databasePath)
+    let stmt = db.prepare('INSERT INTO interrogation (subjectId, studentId, position) VALUES (?,?,?)')
+    stmt.all(subject, student.position, position, (err, row) => {
+      if (err) reject(err)
+      else {
+        resolve()
+      }
+    })
+    stmt.finalize()
+    db.close()
+  })
+}
+
+export async function insertListStudent(subject, list) {  
+  for (let el of list) {
+    await inserStudentInList(subject, el.student, el.position)
+  }
+}
+
+export async function deleteList(subject) {
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(databasePath)
+    let stmt = db.prepare('DELETE FROM interrogation WHERE subjectId=?')
+    stmt.all(subject, (err, row) => {
+      if (err) reject(err)
+      else {
+        resolve()
+      }
+    })
+    stmt.finalize()
+    db.close()
+  })
+}
+
+export async function getInterrogationList(subject) {
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(databasePath)
+    let stmt = db.prepare('SELECT * FROM interrogation WHERE subjectId=? ORDER BY position ASC')
+    stmt.all(subject, (err, row) => {
+      if (err) reject(err)
+      else {
+        row = row.map(async (el) => {
+          return {student : await getStudentById(el.position), position: el.position}
+        })
+        resolve(row)
+      }
+    })
+    stmt.finalize()
+    db.close()
+  })
+}
+
+async function getStudentById(studentId) {
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(databasePath)
+    let stmt = db.prepare('SELECT name, surname, position FROM student WHERE studentId=? LIMIT 1')
+    stmt.all(studentId, (err, row) => {
+      if (err) reject(err)
+      else {
+        if(row.length > 0)
+          resolve(row[0])
+        else
+          reject()
+      }
+    })
+    stmt.finalize()
+    db.close()
+  })
+}
