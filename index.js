@@ -182,7 +182,8 @@ async function onSeeSubject(ctx) {
 
 async function onSubject(ctx) {
   let subject = ctx.match[0].split('$')[1]
-  ctx.reply(subject)
+  await ctx.reply((await getSubjectList(subject)) || "nessun alunno presente")
+  start(ctx)
 }
 
 async function adminPannel(ctx) {
@@ -337,15 +338,15 @@ async function onRandomList(ctx) {
   start(ctx)
 }
 
-export function onAddStudent(ctx) {
+export function onAddStudentInList(ctx) {
   let subject = ctx.match[0].split('$')[1]
-  
+  //TODO: todo
 }
 
 async function getSubjectList(subject) {
   let list = await Database.getInterrogationList(subject)
   return list.map(el => {
-    return el.position + ". " + el.name + " " + el.surname + "\n"
+    return el.position + ". " + el.student.name + " " + el.student.surname + "\n"
   }).join('')
 }
 

@@ -411,14 +411,16 @@ export async function deleteList(subject) {
 }
 
 export async function getInterrogationList(subject) {
-  return new Promise((resolve, reject) => {
+  return new Promise(async(resolve, reject) => {
     const db = new sqlite3.Database(databasePath)
-    let stmt = db.prepare('SELECT * FROM interrogation WHERE subjectId=? ORDER BY position ASC')
-    stmt.all(subject, (err, row) => {
+    let stmt = db.prepare('SELECT interrogation.position, name, surname FROM interrogation JOIN student ON studentId=student.position WHERE subjectId=? ORDER BY interrogation.position ASC')
+    await stmt.all(subject, async(err, row) => {
       if (err) reject(err)
       else {
-        row = row.map(async (el) => {
-          return {student : await getStudentById(el.position), position: el.position}
+        row = row.map(el => {
+          return {
+            student: {name: el.name, surname: el.surname}, position: el.position
+          }
         })
         resolve(row)
       }
@@ -431,7 +433,7 @@ export async function getInterrogationList(subject) {
 async function getStudentById(studentId) {
   return new Promise((resolve, reject) => {
     const db = new sqlite3.Database(databasePath)
-    let stmt = db.prepare('SELECT name, surname, position FROM student WHERE studentId=? LIMIT 1')
+    let stmt = db.prepare('SELECT name, surname, position FROM student WHERE position=? LIMIT 1')
     stmt.all(studentId, (err, row) => {
       if (err) reject(err)
       else {
