@@ -28,6 +28,7 @@ bot.action(/changePostion.+/, onChangePostion)
 bot.on('message', message)
 
 async function realStart(ctx) {
+  await deleteMessageQueue(ctx)
   let isUserLogged = await Database.chatIdExists(ctx.chat.id)
   if (!isUserLogged) {
     start(ctx)
@@ -47,7 +48,8 @@ async function realStart(ctx) {
 async function start(ctx) { 
   let isUserLogged = await Database.chatIdExists(ctx.chat.id)
   if (!isUserLogged) {
-    ctx.reply('Benvenuto, inserisci la password per utilizzare il bot')
+    let m = await ctx.reply('Benvenuto, inserisci la password per utilizzare il bot')
+    await pushMessageToDelete(ctx, m.message_id)
   }
   else {
     action(ctx)
@@ -107,6 +109,7 @@ async function message(ctx) {
 }
 
 async function onPassword(ctx) {
+  await pushMessageToDelete(ctx, ctx.update.message.message_id)
   if (ctx.update.message.text == process.env.PASSWORD) {
     //password OK
     let operation = 'none'
@@ -124,7 +127,7 @@ async function onPassword(ctx) {
   }
 }
 
-async function askLogStudent(ctx) {
+async function askLogStudent(ctx) {  
   await ctx.reply((await makeStudentList()) || "non ci sono studenti ancora")
   await ctx.reply("inserisci il numero di fianco al tuo nome per eseguire il login")
 }

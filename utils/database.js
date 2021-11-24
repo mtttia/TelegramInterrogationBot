@@ -437,7 +437,7 @@ export async function getInterrogationList(subject) {
   })
 }
 
-async function getStudentById(studentId) {
+export async function getStudentById(studentId) {
   return new Promise((resolve, reject) => {
     const db = new sqlite3.Database(databasePath)
     let stmt = db.prepare('SELECT name, surname, position FROM student WHERE position=? LIMIT 1')
@@ -448,6 +448,53 @@ async function getStudentById(studentId) {
           resolve(row[0])
         else
           reject()
+      }
+    })
+    stmt.finalize()
+    db.close()
+  })
+}
+
+
+//deleting message
+export async function addMessageToDelete(chatId, messageId){
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(databasePath)
+    let stmt = db.prepare('INSERT INTO deleteMessage (chatClientId, messageId) VALUES (?,?)')
+    stmt.all(chatId, messageId, (err, row) => {
+      if (err) reject(err)
+      else {
+        resolve()
+      }
+    })
+    stmt.finalize()
+    db.close()
+  })
+}
+
+export async function getMessageToDelete(chatId){
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(databasePath)
+    let stmt = db.prepare('SELECT messageId FROM deleteMessage WHERE chatClientId=?')
+    stmt.all(chatId, (err, row) => {
+      if (err) reject(err)
+      else {
+        resolve(row.map(el => el.messageId))
+      }
+    })
+    stmt.finalize()
+    db.close()
+  })
+}
+
+export async function deleteMessageToDelete(chatId){
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(databasePath)
+    let stmt = db.prepare('DELETE FROM deleteMessage WHERE chatClientId=?')
+    stmt.all(chatId, (err, row) => {
+      if (err) reject(err)
+      else {
+        resolve()
       }
     })
     stmt.finalize()

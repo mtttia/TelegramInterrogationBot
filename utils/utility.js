@@ -1,9 +1,17 @@
-export function pushMessageToDelete(messageId) {
+import { addMessageToDelete, getMessageToDelete, deleteMessageToDelete } from "./database.js"
+
+export async function pushMessageToDelete(ctx, messageId) {
   //enqueue message
+  await addMessageToDelete(ctx.chat.id, messageId)
 }
 
-export function deleteMessageQueue(ctx) {
+export async function deleteMessageQueue(ctx) {
   //delete messages enqueued
+  let messages = await getMessageToDelete(ctx.chat.id)
+  for(let el of messages){
+    ctx.deleteMessage(el)
+  }
+  await deleteMessageToDelete(ctx.chat.id)
 }
 
 export function randomList(list) {

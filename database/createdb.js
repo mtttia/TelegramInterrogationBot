@@ -23,4 +23,6 @@ db.serialize(function() {
   db.run(sql);
   sql = "CREATE TABLE `interrogation` (`subjectId` TEXT NOT NULL,`studentId` INT NOT NULL,`position` INT NOT NULL);";
   db.run(sql);
+  sql = "CREATE TABLE `deleteMessage` (`chatClientId` INT NOT NULL,`messageId` INT NOT NULL);";
+  db.run(sql);
 });
