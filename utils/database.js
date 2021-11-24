@@ -97,64 +97,50 @@ export function addInterrogation(subjectName, studentId, position) {
   })  
 }
 
-export function changeStudentOrder(subjectName, student1, student2){
-  let position1, position2
-  return new Promise((resolve, reject) => {
+export function changeStudentOrder(subjectId, student1, student2){
+  let s1, s2
+  return new Promise((resolve, reject) => {    
     const db = new sqlite3.Database(databasePath)
-    let stmt = db.prepare('SELECT rowId, * FROM subject WHERE name=? LIMIT 1')
-    stmt.all(subjectName, (err, row) => {
+    let stmt2 = db.prepare('SELECT studentId FROM interrogation WHERE subjectId=? AND position=? LIMIT 1')
+    stmt2.all(subjectId, student1, (err, row2) => {
       if (err) reject(err)
-      else {        
-        if (row.length == 0) {
-          //no student in db
+      else {
+        if (row2.length <= 0) {
           reject()
         }
         else {
-          let subjectId = row[0].rowid
-          //search for id1
-          let stmt2 = db.prepare('SELECT position FROM interrogation WHERE subjectId=? AND studentId=? LIMIT 1')
-          stmt2.all(subjectId, student1, (err, row2) => {
-            if (err) reject(err)
+          s1 = row2[0].studentId
+          let stmt3 = db.prepare('SELECT studentId FROM interrogation WHERE subjectId=? AND position=? LIMIT 1')
+          stmt3.all(subjectId, student2, (err, row3) => {
+            if (err) reject()
             else {
-              if (row2.length <= 0) {
+              if (row3.length <= 0) {
                 reject()
               }
               else {
-                position1 = row2[0].position
-                let stmt3 = db.prepare('SELECT position FROM interrogation WHERE subjectId=? AND studentId=? LIMIT 1')
-                stmt3.all(subjectId, student2, (err, row3) => {
+                s2 = row3[0].studentId
+                console.log(s1,s2)
+                let stmt4 = db.prepare('UPDATE interrogation SET position=? WHERE subjectId=? AND studentId=?')
+                stmt4.all(student2, subjectId, s1, (err, row4) => {
                   if (err) reject()
                   else {
-                    if (row.length <= 0) {
-                      reject()
-                    }
-                    else {
-                      position2 = row3[0].position
-                      let stmt4 = db.prepare('UPDATE interrogation SET position=? WHERE subjectId=? AND studentId=?')
-                      stmt4.all(position2, subjectId, student1, (err, row4) => {
-                        if (err) reject()
-                        else {
-                          let stmt5 = db.prepare('UPDATE interrogation SET position=? WHERE subjectId=? AND studentId=?')
-                          stmt5.all(position1, subjectId, student2, (err, row5) => {
-                            if (err) reject()
-                            else resolve()
-                          })
-                          stmt5.finalize()
-                        }
-                      })
-                      stmt4.finalize()
-                    }
+                    let stmt5 = db.prepare('UPDATE interrogation SET position=? WHERE subjectId=? AND studentId=?')
+                    stmt5.all(student1, subjectId, s2, (err, row5) => {
+                      if (err) reject()
+                      else resolve()
+                    })
+                    stmt5.finalize()
                   }
                 })
-                stmt3.finalize()
+                stmt4.finalize()
               }
             }
           })
-          stmt2.finalize()          
+          stmt3.finalize()
         }
       }
     })
-    stmt.finalize()
+    stmt2.finalize()        
     db.close()
   })  
 }
@@ -389,6 +375,27 @@ export async function inserStudentInList(subject, student, position) {
   })
 }
 
+export async function getNextListPostion(subject) {
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(databasePath)
+    let stmt = db.prepare('SELECT position FROM interrogation WHERE subjectId=? ORDER BY position DESC LIMIT 1')
+    stmt.all(subject, (err, row) => {
+      if (err) reject(err)
+      else {
+        if (row.length <= 0) {
+          resolve(1)
+        }
+        else {
+          resolve(row[0].position + 1)  
+        }
+        
+      }
+    })
+    stmt.finalize()
+    db.close()
+  })
+}
+
 export async function insertListStudent(subject, list) {  
   for (let el of list) {
     await inserStudentInList(subject, el.student, el.position)
@@ -413,13 +420,13 @@ export async function deleteList(subject) {
 export async function getInterrogationList(subject) {
   return new Promise(async(resolve, reject) => {
     const db = new sqlite3.Database(databasePath)
-    let stmt = db.prepare('SELECT interrogation.position, name, surname FROM interrogation JOIN student ON studentId=student.position WHERE subjectId=? ORDER BY interrogation.position ASC')
+    let stmt = db.prepare('SELECT interrogation.position as position, name, surname, student.position as studentPosition FROM interrogation JOIN student ON studentId=student.position WHERE subjectId=? ORDER BY interrogation.position ASC')
     await stmt.all(subject, async(err, row) => {
       if (err) reject(err)
       else {
         row = row.map(el => {
           return {
-            student: {name: el.name, surname: el.surname}, position: el.position
+            student: {name: el.name, surname: el.surname, position:el.studentPosition}, position: el.position
           }
         })
         resolve(row)

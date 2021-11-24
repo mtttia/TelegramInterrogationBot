@@ -22,7 +22,8 @@ bot.action(/subject.+/, onSubject)
 bot.action('modifyList', onModifyList)
 bot.action(/modify.+/, onModifySubject)
 bot.action(/randomList.+/,onRandomList)
-bot.action(/addStudent.+/, )
+bot.action(/addStudent.+/, onAddStudentInList)
+bot.action(/changePostion.+/, onChangePostion)
 
 bot.on('message', message)
 
@@ -88,6 +89,12 @@ async function message(ctx) {
       }
       if (state.operation == "addSubject") {
         onAddSubject(ctx)
+      }
+      if (state.operation.includes('AddStudentInList')) {
+        onAddStudentInListGetStudent(ctx)
+      }
+      if (state.operation.includes('ChangePostionOff')) {
+        onChangePostionOff(ctx)
       }
     }
     else {
@@ -322,6 +329,12 @@ async function onModifySubject(ctx) {
             text: "aggiungi uno studente",
             callback_data: "addStudent$" + subject
           }
+        ],
+        [
+          {
+            text: "scambia posizione studenti",
+            callback_data: "changePostion$" + subject
+          }
         ]
       ]
     }}
@@ -338,9 +351,63 @@ async function onRandomList(ctx) {
   start(ctx)
 }
 
-export function onAddStudentInList(ctx) {
+export async function onAddStudentInList(ctx) {
   let subject = ctx.match[0].split('$')[1]
-  //TODO: todo
+  let state = await getState(ctx)
+  state.operation = "AddStudentInList$"+subject
+  await updateState(state)
+  await ctx.reply((await makeStudentList()) || "Nessun studente nella lista")
+  await ctx.reply('inserisci il numero dello studente che vuoi aggiungere (se vuoi tornare indietro clicca su /start)')
+}
+
+export async function onChangePostion(ctx) {
+  let subject = ctx.match[0].split('$')[1]
+  let state = await getState(ctx)
+  state.operation = "ChangePostionOff$" + subject
+  await updateState(state)
+  await ctx.reply((await getSubjectList(subject)) || "Nessuno studente nella lista")
+  await ctx.reply('inserisci i numeri degli studenti da scambiare nel seguente formato "1 2"(scambio il primo della lista col secondo) \n(se vuoi tornare indietro clicca su /start)')
+}
+
+export async function onChangePostionOff(ctx) {
+  try
+  {
+    let state = await getState(ctx)
+    let subject = state.operation.split('$')[1]
+    state.operation = 'none'
+    await updateState(state)
+    let message = ctx.update.message.text.split(' ')
+    let s1 = message[0]
+    let s2 = message[1]
+    await Database.changeStudentOrder(subject, s1, s2)
+    await ctx.reply('scambio avvenuto con successo')
+    start(ctx)
+  } catch (ex) {
+    console.log(ex)
+    await ctx.reply('id studente non valido')
+    start(ctx)
+  }
+    
+  
+}
+
+export async function onAddStudentInListGetStudent(ctx) {
+  let state = await getState(ctx)
+  let subject = state.operation.split('$')[1]
+  state.operation = 'none'
+  await updateState(state)
+  let message = ctx.update.message.text
+  if ((await Database.isStudent(message))) {
+    let nextPosition = await Database.getNextListPostion(subject)
+    await Database.addInterrogation(subject, message, nextPosition)
+    await ctx.reply('interrogazione aggiunta con successo')
+    start(ctx)
+  }
+  else {
+    await ctx.reply('id studente non valido')
+    start(ctx)
+  }
+  
 }
 
 async function getSubjectList(subject) {
