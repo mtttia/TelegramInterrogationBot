@@ -29,6 +29,7 @@ bot.on('message', message)
 
 async function realStart(ctx) {
   await deleteMessageQueue(ctx)
+  await pushMessageToDelete(ctx, ctx.update.message.message_id)
   let isUserLogged = await Database.chatIdExists(ctx.chat.id)
   if (!isUserLogged) {
     start(ctx)
@@ -64,9 +65,6 @@ async function action(ctx) {
   else {
     if (state.studentId == null) {
       askLogStudent(ctx)
-    }
-    else if (state.operation == 'none') {
-      // ctx.reply('wow, è tutto a posto, incredibile')
     }
     else{
       userPannel(ctx)  
@@ -149,7 +147,7 @@ async function onLogStudent(ctx) {
 }
 
 async function userPannel(ctx) {
-  await ctx.telegram.sendMessage(
+  let m = await ctx.telegram.sendMessage(
     ctx.chat.id,
     "Ciao, cosa vuoi fare?",
     {
@@ -165,9 +163,11 @@ async function userPannel(ctx) {
       }
     }
   )
+  await pushMessageToDelete(ctx, m.message_id)
 }
 
 async function onSeeSubject(ctx) {
+  await deleteMessageQueue(ctx)
   let subject = await Database.getSubjects()
   let buttons = {
       reply_markup: {
@@ -181,23 +181,23 @@ async function onSeeSubject(ctx) {
           ]
         })
       }
-  }
-  console.log(buttons)
-  ctx.telegram.sendMessage(
+  }  
+  let m = await ctx.telegram.sendMessage(
     ctx.chat.id,
     "Seleziona la materia",
     buttons
   )
+  await pushMessageToDelete(ctx, m.message_id)
 }
 
 async function onSubject(ctx) {
   let subject = ctx.match[0].split('$')[1]
-  await ctx.reply((await getSubjectList(subject)) || "nessun alunno presente")
+  let m = await ctx.reply((await getSubjectList(subject)) || "nessun alunno presente"); await pushMessageToDelete(ctx, m.message_id)
   start(ctx)
 }
 
 async function adminPannel(ctx) {
-  await ctx.telegram.sendMessage(
+  let m = await ctx.telegram.sendMessage(
     ctx.chat.id,
     "Ciao admin, cosa vuoi fare?",
     {
@@ -231,12 +231,15 @@ async function adminPannel(ctx) {
       }
     }
   )
+  await pushMessageToDelete(ctx, m.message_id)
 }
 
 async function addStudent(ctx) {
+  await deleteMessageQueue(ctx)
   let state = await getState(ctx)
   if (state.admin) {
-    await ctx.reply("isnerisci il cognome ed il nome dello studente nel seguente formato 'cognome nome'")
+    let m = await ctx.reply("inserisci il cognome ed il nome dello studente nel seguente formato 'cognome nome'")
+    await pushMessageToDelete(ctx, m.message_id)
     state.operation = 'addStudent'
     updateState(state)
   }
@@ -244,6 +247,7 @@ async function addStudent(ctx) {
 
 async function onAddStudent(ctx) {
   let state = await getState(ctx)
+  await pushMessageToDelete(ctx, ctx.update.message.message_id)
   try {    
     let message = ctx.update.message.text.split(' ')
     let name = message[1]
@@ -253,7 +257,8 @@ async function onAddStudent(ctx) {
     }
     await Database.addStudent(name, surname)
   } catch (e) {
-    await ctx.reply('nome alunno non valido')
+    let m = await ctx.reply('nome alunno non valido')
+    await pushMessageToDelete(ctx, m.message_id)
   }
   state.operation = "none"
   updateState(state)
@@ -262,9 +267,11 @@ async function onAddStudent(ctx) {
 }
 
 async function addSubject(ctx) {
+  await deleteMessageQueue(ctx)
   let state = await getState(ctx)
   if (state.admin) {
-    await ctx.reply('inserisci il nome della materia \'materia\'')
+    let m = await ctx.reply('inserisci il nome della materia \'materia\'')
+    await pushMessageToDelete(ctx, m.message_id)
     state.operation = "addSubject"
     updateState(state)
   }
@@ -272,6 +279,7 @@ async function addSubject(ctx) {
 
 async function onAddSubject(ctx) {
   let state = await getState(ctx)
+  await pushMessageToDelete(ctx, ctx.update.message.message_id)
   try {
     let subject = ctx.update.message.text.split(' ')
     if (subject == "" || subject.includes('$')) {
@@ -279,7 +287,8 @@ async function onAddSubject(ctx) {
     }
     await Database.addSubject(subject)
   } catch (e) {
-    await ctx.reply('nome materia non valido')
+    let m = await ctx.reply('nome materia non valido')
+    await pushMessageToDelete(ctx, m.message_id)
   }
   state.operation = "none"
   updateState(state)
@@ -288,10 +297,11 @@ async function onAddSubject(ctx) {
 }
 
 async function onModifyList(ctx) {
+  await deleteMessageQueue(ctx)
   let state = await getState(ctx)
   let subjects = await Database.getSubjects()
   if(state.admin) {
-    ctx.telegram.sendMessage(
+    let m = await ctx.telegram.sendMessage(
       ctx.chat.id,
       "Seleziona la materia da modificare",
       {
@@ -308,15 +318,20 @@ async function onModifyList(ctx) {
       }
     )
 
+
+    await pushMessageToDelete(ctx, m.message_id)
+
     state.operation = 'modifyList'
     await updateState(state)
   }
 }
 
 async function onModifySubject(ctx) {
+  await deleteMessageQueue(ctx)
   let subject = ctx.match[0].split('$')[1]
-  await ctx.reply("Lista \n" + ((await getSubjectList(subject)) || "la lista è vuota"))
-  await ctx.telegram.sendMessage(
+  let m = await ctx.reply("Lista \n" + ((await getSubjectList(subject)) || "la lista è vuota"))
+  await pushMessageToDelete(ctx, m.message_id)
+  m = await ctx.telegram.sendMessage(
     ctx.chat.id,
     "Cosa vuoi fare nella lista di " + subject,
     {reply_markup: {
@@ -342,13 +357,15 @@ async function onModifySubject(ctx) {
       ]
     }}
   )
+
+  await pushMessageToDelete(ctx, m.message_id)
 }
 
 async function onRandomList(ctx) {
   let subject = ctx.match[0].split('$')[1]
   let student = await Database.getStudents()
   student = Utility.randomList(student)
-  await ctx.reply('Lista generata \n' + ((student.map(el => el.position + ". " + el.student.name + " " + el.student.surname + "\n").join(''))))
+  let m = await ctx.reply('Lista generata \n' + ((student.map(el => el.position + ". " + el.student.name + " " + el.student.surname + "\n").join('')))); await pushMessageToDelete(ctx, m.message_id)
   await Database.deleteList(subject)
   await Database.insertListStudent(subject, student)
   start(ctx)
@@ -359,22 +376,23 @@ export async function onAddStudentInList(ctx) {
   let state = await getState(ctx)
   state.operation = "AddStudentInList$"+subject
   await updateState(state)
-  await ctx.reply((await makeStudentList()) || "Nessun studente nella lista")
-  await ctx.reply('inserisci il numero dello studente che vuoi aggiungere (se vuoi tornare indietro clicca su /start)')
+  let m = await ctx.reply((await makeStudentList()) || "Nessun studente nella lista"); await pushMessageToDelete(ctx, m.message_id)
+  m = await ctx.reply('inserisci il numero dello studente che vuoi aggiungere (se vuoi tornare indietro clicca su /start)'); await pushMessageToDelete(ctx, m.message_id)
 }
 
-export async function onChangePostion(ctx) {
+export async function onChangePostion(ctx) {  
   let subject = ctx.match[0].split('$')[1]
   let state = await getState(ctx)
   state.operation = "ChangePostionOff$" + subject
   await updateState(state)
-  await ctx.reply((await getSubjectList(subject)) || "Nessuno studente nella lista")
-  await ctx.reply('inserisci i numeri degli studenti da scambiare nel seguente formato "1 2"(scambio il primo della lista col secondo) \n(se vuoi tornare indietro clicca su /start)')
+  let m = await ctx.reply((await getSubjectList(subject)) || "Nessuno studente nella lista"); await pushMessageToDelete(ctx, m.message_id)
+  m = await ctx.reply('inserisci i numeri degli studenti da scambiare nel seguente formato "1 2"(scambio il primo della lista col secondo) \n(se vuoi tornare indietro clicca su /start)'); await pushMessageToDelete(ctx, m.message_id)
 }
 
 export async function onChangePostionOff(ctx) {
   try
   {
+    await pushMessageToDelete(ctx, ctx.update.message.message_id)
     let state = await getState(ctx)
     let subject = state.operation.split('$')[1]
     state.operation = 'none'
@@ -383,11 +401,11 @@ export async function onChangePostionOff(ctx) {
     let s1 = message[0]
     let s2 = message[1]
     await Database.changeStudentOrder(subject, s1, s2)
-    await ctx.reply('scambio avvenuto con successo')
+    let m = await ctx.reply('scambio avvenuto con successo'); await pushMessageToDelete(ctx, m.message_id)
     start(ctx)
   } catch (ex) {
     console.log(ex)
-    await ctx.reply('id studente non valido')
+    let m = await ctx.reply('id studente non valido'); await pushMessageToDelete(ctx, m.message_id)
     start(ctx)
   }
     
@@ -395,6 +413,7 @@ export async function onChangePostionOff(ctx) {
 }
 
 export async function onAddStudentInListGetStudent(ctx) {
+  await pushMessageToDelete(ctx, ctx.update.message.message_id)
   let state = await getState(ctx)
   let subject = state.operation.split('$')[1]
   state.operation = 'none'
@@ -403,11 +422,11 @@ export async function onAddStudentInListGetStudent(ctx) {
   if ((await Database.isStudent(message))) {
     let nextPosition = await Database.getNextListPostion(subject)
     await Database.addInterrogation(subject, message, nextPosition)
-    await ctx.reply('interrogazione aggiunta con successo')
+    let m = await ctx.reply('interrogazione aggiunta con successo'); await pushMessageToDelete(ctx, m.message_id)
     start(ctx)
   }
   else {
-    await ctx.reply('id studente non valido')
+    let m = await ctx.reply('id studente non valido'); await pushMessageToDelete(ctx, m.message_id)
     start(ctx)
   }
   
@@ -421,8 +440,9 @@ async function getSubjectList(subject) {
 }
 
 async function visualizzatore(ctx) {
+  await deleteMessageQueue(ctx)
   let state = await getState(ctx)
-  await ctx.reply('sei entrato in modalità visualizzatore, per uscire scrivi /exit')
+  let m = await ctx.reply('sei entrato in modalità visualizzatore, per uscire scrivi /exit'); await pushMessageToDelete(ctx, m.message_id)
   state.operation = 'normal'
   await updateState(state)
   start(ctx)
@@ -438,11 +458,13 @@ async function getState(ctx) {
 }
 
 async function logout(ctx) {  
+  await pushMessageToDelete(ctx, ctx.update.message.message_id)
   await Database.logout(ctx.chat.id)
   start(ctx)
 }
 
 async function exit(ctx) {
+  await pushMessageToDelete(ctx, ctx.update.message.message_id)
   let state = await getState(ctx)
   state.operation = 'none'
   await updateState(state)
@@ -451,11 +473,11 @@ async function exit(ctx) {
 
 async function printSubjectList(ctx) {
   let subjects = (await Database.getSubjects()).map(el => el.name)
-  ctx.reply(subjects.join("\n") || "non ci sono materie")
+  let m = await ctx.reply(subjects.join("\n") || "non ci sono materie"); await pushMessageToDelete(ctx, m.message_id)
 }
 
 async function printStudentList(ctx) {
-  await ctx.reply((await makeStudentList()) || 'nessun alunno trovato' )
+  let m = await ctx.reply((await makeStudentList()) || 'nessun alunno trovato'); await pushMessageToDelete(ctx, m.message_id)
 }
 
 async function makeStudentList(){
